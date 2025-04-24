@@ -1,7 +1,6 @@
 import math
-import re
-# TODO: Canonical forms, quicker expression initialization
-
+# TODO: Canonical forms, expression initialization, parsing
+# TODO: fix repr
 
 # AST stuff
 class Expression:
@@ -9,16 +8,21 @@ class Expression:
         self.environment = {} if environment is None else environment
         self.subexp = subexp
 
+    # Evaluate subexpression
     def evaluate(self):
         if self.subexp is None:
             return 0
         return self.subexp.evaluate()
 
+    # TODO: implement simplification algorithm 
+    # Can assume that given expression is simplified.
+    # CRMAKE implicitly simplifies?
     def simplify(self): 
         if self.subexp is None:
             return
         self.simplify(self.subexp)
 
+    # remap environment variables to different configuration
     def remap(self, remapping):
         for k,v in remapping.items():
             self.environment[k] = v
@@ -30,7 +34,7 @@ class Expression:
             return
         # mutable environment assignment
         self.subexp.contextualize(mapping)
-    
+
     def __repr__(self):
         return f"Exp({repr(self.subexp)})"
     
@@ -62,6 +66,7 @@ class Symbolic(Atomic):
             print(f'{self.name} undefined')
         return self.environment.get(self.name,0)
 
+    
     def label(self):
         return f'{self.__class__.__name__}({self.name})'
 
@@ -165,3 +170,17 @@ class Division(Binary):
         return 'Div'
 
 
+
+    
+
+            
+
+
+
+
+
+
+
+
+
+    

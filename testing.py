@@ -1,10 +1,6 @@
-from mcr import *
+import parsing
 
-exp = Expression(
-    Summation(
-        Exponentiate(Symbolic('x'),Numeric(2),),
-        Summation(Symbolic('x'),Numeric(3))
-        )
-)
-
-print(exp.hierarchize())
+expr = "5*(x)^2+9*x+3"
+ast = parsing.Parser(expr).parse()
+print(ast.subexp)
+print(ast.hierarchize())

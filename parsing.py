@@ -4,7 +4,7 @@ from pathlib import Path
 import mcr
 
 # ll1 stuff
-
+# TODO : Still need to learn more about parse table in general
 p = Path(__file__).parent / "ll1.json"
 with open(p) as f:
     ll1 = json.load(f)
@@ -50,19 +50,16 @@ def tokenize(src):
 
 # ast stuff
 def astadd(stack,text):
-    
     right = stack.pop()
     left = stack.pop()
     stack.append(mcr.Summation(left,right))
 
 def astsub(stack,text):
-    
     right = stack.pop()
     left = stack.pop()
     stack.append(mcr.Summation(left,mcr.Negative(right)))
 
 def astmul(stack,text):
-    
     right = stack.pop()
     left = stack.pop()
     stack.append(mcr.Multiplication(left,right))
@@ -94,7 +91,7 @@ def astnum(stack,text):
 def astsym(stack,text):
     stack.append(mcr.Symbolic(text))
 
-
+# TODO: Modularize, strange code writing ahead...
 functions = { 
     "#B+" : astadd,
     "#B-" : astsub,
@@ -114,15 +111,16 @@ class Parser:
     def __init__(self,src):
         self.tokens = tokenize(src)
         self.kinds = [token.kind for token in self.tokens]
+        # add terminating EOF
         self.stack = ['EOF', 'E']
         self.pos = 0
         self.ast = []
     
+    # TODO: fix parse table logic
     def parse(self): 
         while self.stack: 
             next = self.stack.pop()
             lookahead = self.kinds[self.pos]
-
             # ast stuff
             if next.startswith("#"): 
                 # handle node construction
@@ -131,19 +129,18 @@ class Parser:
                     text = self.tokens[self.pos-1].text
                 functions[next](self.ast,text)
                 continue
-
-            # terminal
+            # handle terminal 
             if next in terminals:
                 if next != lookahead: 
-                    raise SyntaxError(f"Expected {next!r}, got {lookahead!r}")
+                    # debugging; turn off
+                    raise SyntaxError(f"EXPECTED {next} GOT {lookahead}!!!")
                 self.pos +=1
                 continue
-            
             # nonterminal
             production = ll1[next].get(lookahead)
             if production is None:
-                raise SyntaxError(f"No production for {next!r} on {lookahead!r}")
-            
+                # debugging; turn off
+                raise SyntaxError(f"NO RULE FOR {next} FOR {lookahead}")
             for symbol in reversed(production):
                 self.stack.append(symbol)
         print(self.ast)
