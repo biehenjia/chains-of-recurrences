@@ -1,4 +1,5 @@
-import math
+from math import sin
+from br import BR
 # TODO: Canonical forms, expression initialization, parsing
 # TODO: fix repr
 
@@ -48,6 +49,10 @@ class Expression:
     
     def label(self):
         return self.__class__.__name__
+    
+
+    def CRMAKE(self, x0, h):
+        return BR(self,x0, h)
 
 # Atomic subexpressions have no child subexpresisons 
 class Atomic(Expression):
@@ -69,6 +74,8 @@ class Symbolic(Atomic):
     
     def label(self):
         return f'{self.__class__.__name__}({self.name})'
+    
+    
 
 class Numeric(Atomic):
     def __init__(self,value):
@@ -83,6 +90,10 @@ class Numeric(Atomic):
     
     def __repr__(self):
         return f"Num({self.value})"
+    
+
+    def CRMAKE(self, x0, h):
+        return BR(x0,'+',0)
 
 class Operator(Expression):
     def __init__(self, subexp):
@@ -93,7 +104,7 @@ class Unary(Operator):
         super().__init__(subexp = subexp)
     
 class Factorial(Unary):
-    pass
+    pass 
 
 class Negative(Unary):
     def evaluate(self):
@@ -104,7 +115,7 @@ class Negative(Unary):
     
 class Sinusoid(Unary):
     def evaluate(self):
-        return math.sin(self.subexp.evaluate())
+        return sin(self.subexp.evaluate())
     
     def label(self):
         return "Sin"
@@ -148,6 +159,8 @@ class Summation(Binary):
     def label(self):
         return 'Add'
 
+
+
 class Multiplication(Binary):
     def evaluate(self):
         return self.rightexp.evaluate() * self.leftexp.evaluate()
@@ -171,7 +184,59 @@ class Division(Binary):
 
 
 
+def CRMAKE(expr, x0, h):
     
+    # S1. Trivial cases
+    if isinstance(expr, Numeric):
+        # G = constant
+        return BR(x0, '+', 0)
+    if isinstance(expr, Symbolic):
+        # G = x
+        return BR(x0, '+', h)
+
+    # S2. Recurse into children
+    if isinstance(expr, Summation):
+        left = CRMAKE(expr.leftexp, x0, h)
+        right = CRMAKE(expr.rightexp, x0, h)
+
+        # S3: c + CR  or  CR + c?
+        if left.simple and isinstance(expr.rightexp, Numeric):
+            # Lemma 2: c + {P0,+,f} = {c+P0, +, f}
+            return BR(left.basis + expr.rightexp.value, '+', left.function)
+        if right.simple and isinstance(expr.leftexp, Numeric):
+            return BR(right.basis + expr.leftexp.value, '+', right.function)
+
+        # S4.3: sum of two CRs
+        return left.crsum(right)
+
+    if isinstance(expr, Multiplication):
+        left = CRMAKE(expr.leftexp, x0, h)
+        right = CRMAKE(expr.rightexp, x0, h)
+
+        # S3: c * CR  or  CR * c?
+        if left.simple and isinstance(expr.rightexp, Numeric):
+            return BR(left.basis * expr.rightexp.value, '*', left.function)
+        if right.simple and isinstance(expr.leftexp, Numeric):
+            return BR(right.basis * expr.leftexp.value, '*', right.function)
+
+        if left.puresum and right.puresum:
+            return left.crprod(right)  
+        if left.pureprod and right.pureprod:
+            return left.crexpt(right)  
+
+        # otherwise: no useful CR‐level rule
+        raise ValueError("Cannot build CR for arbitrary product")
+
+    if isinstance(expr, Exponentiate):
+        # treat a^b as CR‐exponentiation
+        left = CRMAKE(expr.leftexp, x0, h)
+        right = CRMAKE(expr.rightexp, x0, h)
+        return left.crexpt(right)
+
+    # TODO: handle Division, Factorial, Sinusoid, etc.
+
+
+    raise NotImplementedError(f"CRMAKE not implemented for {type(expr)}")
 
             
 

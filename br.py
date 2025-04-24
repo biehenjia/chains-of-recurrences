@@ -33,6 +33,31 @@ class BR:
 
         # TODO: is it faster to perform recursive call? More cached calls to retrieve?
 
+    def __call__(self, i):
+        if not isinstance(i, int) or i < 0:
+            raise ValueError('INVALID INDEX')
+        
+        # check cache first
+        if i in self.cache:
+            return self.cache[i]
+
+        if i == 0:
+            val = self.basis
+        else:
+            # recursive step
+            prev = self.__call__(i - 1)
+            term = self.function(i - 1)
+            if self.operator == '+':
+                val = prev + term
+            elif self.operator == '*':
+                val = prev * term
+            else:
+                raise ValueError(f'INVALID OPERATOR {self.operator}')
+        
+        # store and return
+        self.cache[i] = val
+        return val
+
     def coefficients(self):
         if not (self.puresum or self.pureprod):
             # debugging
@@ -134,6 +159,16 @@ class BR:
             curr = BR(coefficients[-i-1],op,curr )
         return curr
 
-# should really go into symbolics
-def CRMAKE():
-    pass
+    def __repr__(self):
+        pass
+    
+    
+
+        
+    
+    
+
+
+
+
+
