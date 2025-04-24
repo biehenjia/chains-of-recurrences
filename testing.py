@@ -9,6 +9,13 @@ expr1 = "(2^(x^3+3*x^2-3*x+1))/(2^(x^2-2*x+1))"
 ast1 = parsing.Parser(expr1).parse()
 print(ast1.hierarchize())
 
-sampleBR = ast1.CRMAKE(1,1)
 
-sampleBR(5)
+expr2 = "x^2"
+ast2 = parsing.Parser(expr2).parse()
+print(ast2.hierarchize())
+
+br = parsing.mcr.CRMAKE(ast2,0,1)
+br.dump()
+
+for i in range(8):
+    print(br(i))

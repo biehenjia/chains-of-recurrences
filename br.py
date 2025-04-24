@@ -73,6 +73,7 @@ class BR:
         else: 
             coefficient.append(self.function(0))
         self.cache['COEFFICIENTS'] = coefficient
+        return coefficient
         
     def crsum(self,target):
         if not (self.puresum and target.puresum):
@@ -159,8 +160,17 @@ class BR:
             curr = BR(coefficients[-i-1],op,curr )
         return curr
 
-    def __repr__(self):
-        pass
+
+    def dump(self, indent=0):
+        print("  " * indent + f"BR(basis={self.basis!r}, op={self.operator!r})")
+        if isinstance(self.function, BR):
+            # CORRECT: call dump on the *child* instance,
+            # passing only the new indent
+            self.function.dump(indent + 1)
+        else:
+            # leaf: show the constant
+            leaf = self.function(0)
+            print("  " * (indent + 1) + f"→ leaf value = {leaf!r}")
     
     
 
