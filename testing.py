@@ -1,4 +1,6 @@
 from parsing import *
+import time
+
 # expr = "5*(x)^2+9*x+3"
 # ast = parsing.Parser(expr).parse()
 # print(ast.subexp)
@@ -19,21 +21,35 @@ from parsing import *
 # for i in range(8):
 #     print(br(i))
 
-expr = "x"
+
+expr = 'x+2*x+4+x'
 ast = Parser(expr).parse()
+mapping = {'x':0}
+ast.contextualize(mapping)
+#print(ast.hierarchize())
+a = time.perf_counter()
+br = ast.crmake(0,1)
+b = time.perf_counter()
+print(b-a)
+br.dump()
+IT = 10**6
+res1 = []
+res2 = []
+start = time.perf_counter()
+for i in range(IT):
+    res1.append(br(i))
+end = time.perf_counter()
+e1 = end - start
 
+for x in range (IT):
+    mapping['x' ] = x
+    res2.append(ast.evaluate())
+end1 = time.perf_counter()
+e2 = end1- end
+print('TIME (S)')
+print('CR: ',e1,'NAIVE: ', e2)
+print(res1[-1],res2[-1])
 
-br1 = BR(0,'+',1)
-br2 = BR(0,'+',1)
-br3 = br1 * br2
-br3 *= br3
-br3.dump()
-print(br3.puresum)
-for i in range(5):
-    a = br1(i) * br2(i)
-    print(br1(i),br2(i),a,br3(i))
-
-
-
+print(time.perf_counter()-start)
 
 

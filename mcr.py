@@ -121,6 +121,9 @@ class Sinusoid(Unary):
     
     def label(self):
         return "Sin"
+    
+    def crmake(self, x0, h):
+        return CRsinusoid(self.subexp.crmake(x0,h))
 
 class Binary(Operator):
     def __init__(self, leftexp, rightexp):
@@ -163,6 +166,9 @@ class Summation(Binary):
     def label(self):
         return 'Add'
 
+    def crmake(self, x0, h):
+        return self.rightexp.crmake(x0,h) + self.leftexp.crmake(x0,h)
+    
 class Multiplication(Binary):
     def evaluate(self):
         return self.rightexp.evaluate() * self.leftexp.evaluate()
@@ -170,12 +176,17 @@ class Multiplication(Binary):
     def label(self):
         return 'Mul'
 
+    def crmake(self, x0, h):
+        return self.rightexp.crmake(x0,h) * self.leftexp.crmake(x0,h)
 class Exponentiate(Binary):
     def evaluate(self):
         return self.leftexp.evaluate() ** self.rightexp.evaluate()
     
     def label(self):
         return 'Pow'
+    
+    def crmake(self, x0,h):
+        return self.leftexp.crmake(x0,h) ** self.rightexp.crmake(x0,h)
     
 class Division(Binary):
     def evaluate(self):
@@ -185,6 +196,9 @@ class Division(Binary):
         return 'Div'
 
 
+
+
+        
 # PROTOTYPING BR CLASS
 class BR:
     def __init__(self, basis, operator, function):
@@ -195,7 +209,8 @@ class BR:
         self.depth = 1
         # initialize cache
         # TODO: necessary? is it faster? maybe can consolidate 1 loop
-        self.cache = {}
+        self.cache = []
+        self.coeffs = []
 
         # check if BR first before interrogating
         if isinstance(function,BR):
@@ -215,33 +230,63 @@ class BR:
 
         # TODO: is it faster to perform recursive call? More cached calls to retrieve?
 
-    def __call__(self, i):
-        if not isinstance(i, int) or i < 0:
-            raise ValueError('INVALID INDEX')
+    # def __call__(self, i):
+    #     if not isinstance(i, int) or i < 0:
+    #         raise ValueError('INVALID INDEX')
         
-        # check cache first
-        if i in self.cache:
-            return self.cache[i]
+    #     # check cache first
+    #     if i in self.cache:
+    #         return self.cache[i]
 
-        if i == 0:
-            val = self.basis
-        else:
-            # recursive step
-            prev = self.__call__(i - 1)
-            if callable(self.function):
-                term = self.function(i - 1)
-            else:
-                term = self.function
-            if self.operator == '+':
-                val = prev + term
-            elif self.operator == '*':
-                val = prev * term
-            else:
-                raise ValueError(f'INVALID OPERATOR {self.operator}')
+    #     if i == 0:
+    #         val = self.basis
+    #     else:
+    #         # recursive step
+    #         prev = self.__call__(i - 1)
+    #         if callable(self.function):
+    #             term = self.function(i - 1)
+    #         else:
+    #             term = self.function
+    #         if self.operator == '+':
+    #             val = prev + term
+    #         elif self.operator == '*':
+    #             val = prev * term
+    #         else:
+    #             raise ValueError(f'INVALID OPERATOR {self.operator}')
         
-        # store and return
-        self.cache[i] = val
-        return val
+    #     # store and return
+    #     self.cache[i] = val
+    #     return val
+
+    def __call__(self, i):
+        if i < 0 or not isinstance(i, int):
+            raise ValueError
+
+        if not callable(self.function):
+            C = self.function
+            if self.operator == '+':
+                return self.basis + i*C
+            elif self.operator == '*':
+                return self.basis * (C**i)
+            else:
+                raise ValueError
+
+
+        op = self.operator
+        f  = self.function
+        cache = self.cache
+        if not cache:
+            cache.append(self.basis)
+        prev = cache[-1]
+        append = cache.append
+        for j in range(len(cache), i+1):
+            term = f(j-1)
+            if op == '+':
+                prev = prev + term
+            else:
+                prev = prev * term
+            append(prev)
+        return prev
 
     def coefficients(self):
         if not (self.puresum or self.pureprod):
@@ -249,15 +294,15 @@ class BR:
             raise ValueError('NOT PURESUM OR PUREPROD!!!!!')
 
         # compute coefficients once.
-        if 'COEFFICIENTS' in self.cache:
-            return self.cache['COEFFICIENTS']
+        if self.coeffs:
+            return self.coeffs
         
         coefficient = [self.basis]
         if isinstance(self.function, BR):
             coefficient.extend(self.function.coefficients())
         else: 
             coefficient.append(self.function)
-        self.cache['COEFFICIENTS'] = coefficient
+        self.coeffs=coefficient
         return coefficient
         
     def crsum(self,target):
@@ -272,7 +317,7 @@ class BR:
         for i in range(len(c1),len(c2)):
             res.append(c2[i])
         for i in range(len(c2),len(c1)):
-            res.apend(c1[i])
+            res.append(c1[i])
         
         return self.coeffRestore(res, '+')
 
@@ -402,7 +447,7 @@ class BR:
         elif isinstance(target, BR):
             if self.puresum and target.puresum:
                 return self.crprod(target)
-            elif self.purprod and target.pureprod:
+            elif self.pureprod and target.pureprod:
                 return self.crpureprod(target)
             elif self.operator == target.operator:              
                 if self.operator == '*':
@@ -421,10 +466,117 @@ class BR:
         return self * target
 
     def __pow__(self, target):
-        pass
+        if target == 0 or float(0):
+            return 1
+        if self.puresum and isinstance(target,int) and target > 0:
+            return self * (self**(target-1))
+        # self operator is plus, but not a pure sum
+        elif self.operator == '+':
+            return CRexponentiation(self, target)
+        # not a plus operator
+        elif isinstance(target, (int,float)):
+            self.basis **= target
+            self.function **= target
+        elif isinstance(target, BR):
+            if self.pureprod and target.puresum: 
+                return self.crexpt(target)
+            if target.operator == '+':
+                self.basis **= target.basis
+                self.function = self**target.function * self.function ** target * self.function ** target.function
+                return self
+        
 
     # not implemented
     def __rpow__(self,target):
-        pass
+        if isinstance(target, (int,float)):
+            self.basis = target ** self.basis
+            self.function = target ** self.function
+            return self
+        return self ** target
 
+class CRsummation(BR):
+    
+    def __init__(self,leftexp,rightexp):
+        self.leftbr = leftexp
+        self.rightbr = rightexp
+        self.cache = {}
+        self.puresum = False
+        self.pureprod = False
+        self.simple = False
+        self.operator = None
 
+    def __call__(self, i):
+        left = self.leftbr
+        right = self.rightbr
+        if callable(left):
+            left = self.leftbr(i)
+        if callable(right):
+            right = self.rightbr(i)
+        return left + right
+
+    def dump(self):
+        self.leftbr.dump()
+        self.rightbr.dump()
+    
+class CRmultiplication(BR):
+    def __init__(self,leftbr, rightbr):
+        self.leftbr = leftbr
+        self.rightbr = rightbr
+        self.puresum = False
+        self.pureprod = False
+        self.simple = False
+        self.operator = None
+
+    def __call__(self, i):
+        left = self.leftbr
+        right = self.rightbr
+        if callable(left):
+            left = self.leftbr(i)
+        if callable(right):
+            right = self.rightbr(i)
+        return left + right
+
+    def dump(self):
+        self.leftbr.dump()
+        self.rightbr.dump()
+
+class CRexponentiation(BR):
+    def __init__(self, leftbr, rightbr):
+        self.leftbr = leftbr
+        self.rightbr = rightbr
+        self.puresum = False
+        self.pureprod = False
+        self.simple = False
+        self.operator = None
+  
+    def __call__(self, i): 
+        left = self.leftbr
+        right = self.rightbr
+        if callable(left):
+            left = self.leftbr(i)
+        if callable(right):
+            right = self.rightbr(i)
+        return left ** right
+
+    def dump(self):
+        if isinstance(self.leftbr, BR):
+            self.leftbr.dump()
+
+        if isinstance(self.rightbr, BR):
+            self.rightbr.dump()
+
+class CRsinusoid(BR):
+    def __init__(self, subexp):
+        self.subexp = subexp
+        self.puresum = False
+        self.pureprod = False
+        self.simple = False
+        self.operator = None
+  
+    def __call__(self, i):
+        subexpeval = self.subexp(i)
+        return sin(subexpeval)
+    
+    def dump(self):
+        self.subexp.dump()
+        

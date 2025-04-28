@@ -86,7 +86,10 @@ def astsin(stack,text):
     stack.append( Sinusoid(stack.pop()))
 
 def astnum(stack,text):
-    stack.append(Numeric(float(text)))
+    if float(text) == int(text):
+        stack.append(Numeric(int(text)))
+    else:
+        stack.append(Numeric(float(text)))
 
 def astsym(stack,text):
     stack.append(Symbolic(text))
