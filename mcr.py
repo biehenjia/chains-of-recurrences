@@ -271,7 +271,7 @@ class BR:
         return self.coeffRestore(res, '+')
 
 
-    def pureprod(self,target):
+    def crpureprod(self,target):
         if not (self.pureprod and target.pureprod):
             raise ValueError('NOT PUREPROD!!')
         c1 = self.coefficients()
@@ -359,8 +359,10 @@ class BR:
             leaf = self.function(0)
             print("  " * (indent + 1) + f"→ leaf value = {leaf!r}")
     
+    def __add__(self, target):
+        pass
 
-def crmake(expr, x0, h):
+    def __mul__(self, target):
+        pass
 
-    if isinstance(expr, Numeric):
-        return BR(expr.value(),'+',0)
+
