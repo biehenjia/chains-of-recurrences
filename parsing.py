@@ -1,7 +1,7 @@
 import re
 import json
 from pathlib import Path
-import mcr
+from mcr import *
 
 # ll1 stuff
 # TODO : Still need to learn more about parse table in general
@@ -52,44 +52,44 @@ def tokenize(src):
 def astadd(stack,text):
     right = stack.pop()
     left = stack.pop()
-    stack.append(mcr.Summation(left,right))
+    stack.append(Summation(left,right))
 
 def astsub(stack,text):
     right = stack.pop()
     left = stack.pop()
-    stack.append(mcr.Summation(left,mcr.Negative(right)))
+    stack.append(Summation(left,Negative(right)))
 
 def astmul(stack,text):
     right = stack.pop()
     left = stack.pop()
-    stack.append(mcr.Multiplication(left,right))
+    stack.append(Multiplication(left,right))
 
 def astdiv(stack,text):
     
     right = stack.pop()
     left = stack.pop()
-    stack.append( mcr.Division(left,right))
+    stack.append(Division(left,right))
 
 def astexp(stack,text):
     
     right = stack.pop()
     left = stack.pop()
-    stack.append(mcr.Exponentiate(left,right))
+    stack.append(Exponentiate(left,right))
 
 def astneg(stack,text):
-    stack.append(mcr.Negative(stack.pop()))
+    stack.append(Negative(stack.pop()))
 
 def astfac(stack,text):
-    stack.append( mcr.Factorial(stack.pop()))
+    stack.append( Factorial(stack.pop()))
 
 def astsin(stack,text):
-    stack.append( mcr.Sinusoid(stack.pop()))
+    stack.append( Sinusoid(stack.pop()))
 
 def astnum(stack,text):
-    stack.append(mcr.Numeric(float(text)))
+    stack.append(Numeric(float(text)))
 
 def astsym(stack,text):
-    stack.append(mcr.Symbolic(text))
+    stack.append(Symbolic(text))
 
 # TODO: Modularize, strange code writing ahead...
 functions = { 
