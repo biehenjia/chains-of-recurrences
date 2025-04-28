@@ -1,6 +1,5 @@
 from math import comb, log, exp, sin
 
-
 # TODO: Canonical forms, expression initialization, parsing
 # TODO: fix repr
 
@@ -15,6 +14,9 @@ class Expression:
         if self.subexp is None:
             return 0
         return self.subexp.evaluate()
+    
+    def crmake(self,x0, h):
+        return self.subexp.crmake(x0,h)
 
     # TODO: implement simplification algorithm 
     # Can assume that given expression is simplified.
@@ -52,8 +54,6 @@ class Expression:
         return self.__class__.__name__
     
 
-    def CRMAKE(self, x0, h):
-        return BR(self.subexp,x0, h)
 
 # Atomic subexpressions have no child subexpresisons 
 class Atomic(Expression):
@@ -72,6 +72,8 @@ class Symbolic(Atomic):
             print(f'{self.name} undefined')
         return self.environment.get(self.name,0)
 
+    def crmake(self, x0,h):
+        return BR(x0,'+',h)
     
     def label(self):
         return f'{self.__class__.__name__}({self.name})'
@@ -85,15 +87,15 @@ class Numeric(Atomic):
     def evaluate(self):
         return self.value
 
+    def crmake(self, x0, h):
+        return self.value
+    
     def label(self):
         return f'{self.__class__.__name__}({self.value})'
     
     def __repr__(self):
         return f"Num({self.value})"
     
-
-    def CRMAKE(self, x0, h):
-        return BR(x0,'+',0)
 
 class Operator(Expression):
     def __init__(self, subexp):
@@ -152,6 +154,8 @@ class Binary(Operator):
     def label():
         return 'Bin'
     
+    
+    
 class Summation(Binary):
     def evaluate(self): 
         return  self.rightexp.evaluate() + self.leftexp.evaluate()
@@ -180,6 +184,7 @@ class Division(Binary):
     def label(self):
         return 'Div'
 
+
 # PROTOTYPING BR CLASS
 class BR:
     def __init__(self, basis, operator, function):
@@ -203,10 +208,8 @@ class BR:
         else:
             # Constant function case: wrap and set to simple.
             if not callable(function):
-                self.function = lambda x : function
                 self.simple = True
-            else:
-                self.function = function
+            self.function = function
             
             self.tail = function # save the function regardless
 
@@ -225,7 +228,10 @@ class BR:
         else:
             # recursive step
             prev = self.__call__(i - 1)
-            term = self.function(i - 1)
+            if callable(self.function):
+                term = self.function(i - 1)
+            else:
+                term = self.function
             if self.operator == '+':
                 val = prev + term
             elif self.operator == '*':
@@ -250,7 +256,7 @@ class BR:
         if isinstance(self.function, BR):
             coefficient.extend(self.function.coefficients())
         else: 
-            coefficient.append(self.function(0))
+            coefficient.append(self.function)
         self.cache['COEFFICIENTS'] = coefficient
         return coefficient
         
@@ -341,8 +347,7 @@ class BR:
     # TODO : rebuild process costly? 
     # Leaning towards not necessarily
     def coeffRestore(self,coefficients,op):
-        function = lambda x : coefficients[-1]
-        curr = function
+        curr = coefficients[-1]
         for i in range(1,len(coefficients)):
             curr = BR(coefficients[-i-1],op,curr )
         return curr
@@ -356,13 +361,70 @@ class BR:
             self.function.dump(indent + 1)
         else:
             # leaf: show the constant
-            leaf = self.function(0)
+            leaf = self.function
             print("  " * (indent + 1) + f"→ leaf value = {leaf!r}")
     
     def __add__(self, target):
-        pass
+        if self.operator == '*':
+            return CRsummation(self,target)
+        
+        # S3 proposition 1
+        if isinstance(target,(int,float)):
+            self.basis += target
+            return self
+        # S3 proposition 2
+        elif self.puresum and target.puresum:
+            return self.crsum(target)
+        # S4.1
+        elif isinstance(target, BR): 
+            if target.operator == '+':
+                self.basis += target.basis
+                self.function += target.function
+                return self
+            else: 
+                return CRsummation(self.function,target.function)
+        else:
+            raise NotImplemented
+
+    def __radd__(self,target): 
+        return self + target
 
     def __mul__(self, target):
+        # constant case
+        if isinstance(target, (int,float)):
+            if self.operator == '+':
+                self.basis *= target
+                self.function *= target
+                return self
+            else:
+                self.basis *= target
+                return self
+        elif isinstance(target, BR):
+            if self.puresum and target.puresum:
+                return self.crprod(target)
+            elif self.purprod and target.pureprod:
+                return self.crpureprod(target)
+            elif self.operator == target.operator:              
+                if self.operator == '*':
+                    self.basis *= target.basis
+                    self.function *= target.function
+                    return self
+                elif self.operator == '+':
+                    self.basis *= target.basis
+                    self.function = self * target.function + target * self.function + self.function * target.function
+                    return self
+            else:
+                return CRmultiplication(self, target)
+               
+
+    def __rmul__(self, target):
+        return self * target
+
+    def __pow__(self, target):
+        pass
+
+    # not implemented
+    def __rpow__(self,target):
         pass
 
 

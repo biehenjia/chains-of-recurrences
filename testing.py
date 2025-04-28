@@ -1,5 +1,4 @@
 from parsing import *
-
 # expr = "5*(x)^2+9*x+3"
 # ast = parsing.Parser(expr).parse()
 # print(ast.subexp)
@@ -23,21 +22,16 @@ from parsing import *
 expr = "x"
 ast = Parser(expr).parse()
 
-br1 = BR(2,'+',BR(8,'+',6)) # x
-br2 = BR(1,'+',1) # x
-# x * x
-br1 = BR(1,'*',2)
+
+br1 = BR(0,'+',1)
 br2 = BR(0,'+',1)
-br3 = lambda x : (2**x)**x
-br1.dump()
-test = br1.crexpt(br2)
-test.dump()
+br3 = br1 * br2
+br3 *= br3
+br3.dump()
+print(br3.puresum)
 for i in range(5):
-    a = br1(i) ** br2(i)
-    b = test(i)
-    print(br1(i),br2(i),a,b,br3(i))
-
-
+    a = br1(i) * br2(i)
+    print(br1(i),br2(i),a,br3(i))
 
 
 
