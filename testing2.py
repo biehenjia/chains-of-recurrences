@@ -1,6 +1,6 @@
 from parsing import *
 import time 
-expr = 'sin(x^2)'
+expr = ' sin(x^2)+x'
 ast = Parser(expr).parse()
 print(ast.hierarchize())
 br = ast.crmake(0,1)

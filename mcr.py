@@ -1,4 +1,4 @@
-from math import comb, log, exp, sin
+from math import comb, log, exp, sin, factorial
 
 # TODO: Canonical forms, expression initialization, parsing
 # TODO: fix repr
@@ -106,7 +106,14 @@ class Unary(Operator):
         super().__init__(subexp = subexp)
     
 class Factorial(Unary):
-    pass 
+    def __init__(self, subexp):
+        super().__init__(subexp)
+    
+    def label(self):
+        return "Fact"
+    
+    def evaluate(self):
+        return factorial(self.subexp)
 
 class Negative(Unary):
     def evaluate(self):
@@ -196,9 +203,6 @@ class Division(Binary):
         return 'Div'
 
 
-
-
-        
 # PROTOTYPING BR CLASS
 class BR:
     def __init__(self, basis, operator, function):
